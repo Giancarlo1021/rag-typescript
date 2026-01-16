@@ -37,13 +37,3 @@ src/
 ├── utils/         # Utility functions
 ├── config/        # Configuration
 └── index.ts       # Entry point
-```
-
-## Features (Planned)
-
-- [ ] PDF document processing
-- [ ] Intelligent text chunking
-- [ ] Vector embeddings with ChromaDB
-- [ ] RAG query pipeline
-- [ ] Streaming responses
-- [ ] API endpoint (Fastify)
