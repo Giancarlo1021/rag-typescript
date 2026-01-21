@@ -1,26 +1,24 @@
 import { TextLoader } from './loaders/textLoader';
 import { TextChunker } from './utils/chunker';
 import { VectorStoreManager } from './vectorstore/chromaStore';
+import { setupChain } from './chains/retrievalChain';
 
 async function main() {
-  console.log('--- RAG System: Vector Storage Phase ---\n');
-
-  // 1. Load document
-  const loader = new TextLoader();
-  const document = await loader.load('./test-data/sample.txt');
-
-  // 2. Chunk document
-  const chunker = new TextChunker({ chunkSize: 200, chunkOverlap: 50 });
-  const chunks = chunker.chunkDocument(document);
-  console.log(`✓ Created ${chunks.length} chunks.`);
-
-  // 3. Initialize Vector Store and Add Chunks
+  // ... (previous ingestion code here) ...
   const vectorStoreManager = new VectorStoreManager();
   await vectorStoreManager.addDocuments(chunks);
 
-  console.log('\n✓ Vector store populated successfully.');
+  console.log('--- Starting Retrieval ---\n');
+
+  const ragChain = await setupChain();
+  const question = "What is the main topic of the document?"; // Adjust based on your sample.txt
+
+  const response = await ragChain.invoke({
+    input: question,
+  });
+
+  console.log("Question:", question);
+  console.log("Answer:", response.answer);
 }
 
-main().catch((err) => {
-  console.error("Error during execution:", err);
-});
+main().catch(console.error);
