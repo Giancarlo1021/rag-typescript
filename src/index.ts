@@ -1,25 +1,58 @@
+import * as readline from 'node:readline/promises';
+import { stdin as input, stdout as output } from 'node:process';
 import { HumanMessage, AIMessage } from "@langchain/core/messages";
-import { setupChain } from "./chains/retrievalChain";
-// ... (other imports)
+import { TextLoader } from './loaders/textLoader';
+import { TextChunker } from './utils/chunker';
+import { VectorStoreManager } from './vectorstore/chromaStore';
+import { setupChain } from './chains/retrievalChain';
 
 async function main() {
-  // ... (keep ingestion logic) ...
+  const rl = readline.createInterface({ input, output });
 
+  console.log('--- 🤖 RAG Terminal System ---');
+
+  // 1. Ingestion (In a real app, you might check if the DB already has data)
+  const loader = new TextLoader();
+  const document = await loader.load('./test-data/sample.txt');
+  const chunker = new TextChunker({ chunkSize: 500, chunkOverlap: 50 });
+  const chunks = chunker.chunkDocument(document);
+
+  const vectorStoreManager = new VectorStoreManager();
+  await vectorStoreManager.addDocuments(chunks);
+
+  // 2. Setup the Chain
   const ragChain = await setupChain();
+  let chatHistory: (HumanMessage | AIMessage)[] = [];
 
-  // We maintain an array of messages to act as history
-  let chatHistory: any[] = [];
+  console.log('\nSystem ready. Type your questions (or "exit" to quit).\n');
 
-  // Round 1
-  const q1 = "What is this document about?";
-  const res1 = await ragChain.invoke({ input: q1, chat_history: chatHistory });
-  console.log(`User: ${q1}\nAI: ${res1.answer}\n`);
+  // 3. Interactive Loop
+  while (true) {
+    const userInput = await rl.question('You: ');
 
-  // Update history
-  chatHistory.push(new HumanMessage(q1), new AIMessage(res1.answer));
+    if (userInput.toLowerCase() === 'exit' || userInput.toLowerCase() === 'quit') {
+      console.log('Goodbye!');
+      break;
+    }
 
-  // Round 2 (Contextual question)
-  const q2 = "Can you give me more details about it?";
-  const res2 = await ragChain.invoke({ input: q2, chat_history: chatHistory });
-  console.log(`User: ${q2}\nAI: ${res2.answer}`);
+    try {
+      const response = await ragChain.invoke({
+        input: userInput,
+        chat_history: chatHistory,
+      });
+
+      console.log(`\nAI: ${response.answer}\n`);
+
+      // Update history for context in the next turn
+      chatHistory.push(new HumanMessage(userInput));
+      chatHistory.push(new AIMessage(response.answer));
+
+    } catch (error) {
+      console.error('Error getting response:', error);
+    }
+  }
+
+  rl.close();
 }
+
+main().catch(console.error);
