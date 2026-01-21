@@ -1,62 +1,85 @@
 import { Ollama, OllamaEmbeddings } from "@langchain/ollama";
 import { ChatPromptTemplate, MessagesPlaceholder } from "@langchain/core/prompts";
-import { createRetrievalChain } from "langchain/chains/retrieval";
-import { createStuffDocumentsChain } from "langchain/chains/combine_documents";
-import { createHistoryAwareRetriever } from "langchain/chains/history_aware_retriever";
 import { Chroma } from "@langchain/community/vectorstores/chroma";
+import { StringOutputParser } from "@langchain/core/output_parsers";
+import { RunnablePassthrough, RunnableSequence } from "@langchain/core/runnables";
+
+// 💡 Helper function to turn database results into a single string for the AI
+const formatDocuments = (docs: any[]) => {
+    return docs.map((doc) => doc.pageContent).join("\n\n");
+};
 
 export const setupChain = async () => {
     const llm = new Ollama({
-        model: "llama3",
+        model: "gpt-oss:20b",
         temperature: 0,
     });
 
-    const vectorStore = await Chroma.fromExistingCollection(
-        new OllamaEmbeddings({ model: "llama3" }),
-        { collectionName: "rag-collection", url: "http://localhost:8000" }
-    );
+    const embeddings = new OllamaEmbeddings({
+        model: "qwen3-embedding:0.6b"
+    });
 
-    const retriever = vectorStore.asRetriever();
+    // Connect to the Docker Server
+    const vectorStore = await Chroma.fromExistingCollection(embeddings, {
+        collectionName: "rag-collection",
+        url: "http://localhost:8000",
+    });
 
-    // 1. Define the logic to "re-phrase" the question with history
-    const contextualizeQSystemPrompt = `
-    Given a chat history and the latest user question 
-    which might reference context in the chat history, 
-    formulate a standalone question which can be understood 
-    without the chat history. Do NOT answer the question, 
-    just reformulate it if needed and otherwise return it as is.`;
+    // 💡 Increase 'k' to 5 to give the AI more context per question
+    const retriever = vectorStore.asRetriever({ k: 5 });
 
     const contextualizeQPrompt = ChatPromptTemplate.fromMessages([
-        ["system", contextualizeQSystemPrompt],
+        ["system", "Given a chat history and the latest user question, formulate a standalone question which can be understood without the chat history."],
         new MessagesPlaceholder("chat_history"),
         ["human", "{input}"],
     ]);
-
-    const historyAwareRetriever = await createHistoryAwareRetriever({
-        llm,
-        retriever,
-        rephrasePrompt: contextualizeQPrompt,
-    });
-
-    // 2. Define the prompt for the actual answer
-    const systemPrompt = `
-    You are an assistant for question-answering tasks. 
-    Use the following pieces of retrieved context to answer the question. 
-    Context: {context}`;
 
     const qaPrompt = ChatPromptTemplate.fromMessages([
-        ["system", systemPrompt],
+        ["system", `You are an RPG Rulebook Expert. Use the following retrieved context from the PDF to answer the question. 
+
+    STRICT FORMATING RULES:
+    1. Always use **bold** for key terms, attribute names, and section titles.
+    2. Always use *italics* for book quotes or emphasis.
+    3. Use bullet points for lists.
+    4. If you don't know the answer based on the context, say that you don't know—do not make up rules.
+
+    Context:
+    {context}`],
         new MessagesPlaceholder("chat_history"),
         ["human", "{input}"],
     ]);
 
-    const combineDocsChain = await createStuffDocumentsChain({
-        llm,
-        prompt: qaPrompt,
-    });
+    const ragChain = RunnableSequence.from([
+        RunnablePassthrough.assign({
+            context: async (input: any) => {
+                const recentHistory = input.chat_history.slice(-4);
+                let query = input.input;
 
-    return await createRetrievalChain({
-        retriever: historyAwareRetriever,
-        combineDocsChain,
-    });
+                // Create standalone question if there is history
+                if (recentHistory.length > 0) {
+                    const standaloneChain = contextualizeQPrompt.pipe(llm).pipe(new StringOutputParser());
+                    query = await standaloneChain.invoke({
+                        ...input,
+                        chat_history: recentHistory
+                    });
+                }
+
+                // 💡 Fetch the documents
+                const docs = await retriever.invoke(query);
+
+                // 💡 Format them into a string so the LLM can actually read them
+                return formatDocuments(docs);
+            },
+        }),
+        qaPrompt,
+        llm,
+        new StringOutputParser(),
+    ]);
+
+    return {
+        invoke: async (params: { input: string; chat_history: any[] }) => {
+            const result = await ragChain.invoke(params);
+            return { answer: result };
+        }
+    };
 };
