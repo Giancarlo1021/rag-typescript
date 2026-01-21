@@ -1,0 +1,6 @@
+{
+  "watch": ["src"],
+  "ext": "ts,json",
+  "ignore": ["chroma_data/*", "docs/*"],
+  "exec": "tsx src/index.ts"
+}
