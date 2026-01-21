@@ -1,24 +1,26 @@
 import { TextLoader } from './loaders/textLoader';
 import { TextChunker } from './utils/chunker';
+import { VectorStoreManager } from './vectorstore/chromaStore';
 
 async function main() {
-  console.log('RAG System Starting...\n');
+  console.log('--- RAG System: Vector Storage Phase ---\n');
 
-  // Load document
+  // 1. Load document
   const loader = new TextLoader();
   const document = await loader.load('./test-data/sample.txt');
-  console.log('Document loaded:', document.metadata.source);
-  console.log('Document length:', document.content.length, 'characters\n');
 
-  // Chunk document
-  const chunker = new TextChunker({ chunkSize: 100, chunkOverlap: 20 });
+  // 2. Chunk document
+  const chunker = new TextChunker({ chunkSize: 200, chunkOverlap: 50 });
   const chunks = chunker.chunkDocument(document);
-  console.log('Created', chunks.length, 'chunks\n');
+  console.log(`✓ Created ${chunks.length} chunks.`);
 
-  // Display chunks
-  chunks.forEach((chunk, i) => {
-    console.log(`Chunk ${i}:`, chunk.content.substring(0, 50) + '...');
-  });
+  // 3. Initialize Vector Store and Add Chunks
+  const vectorStoreManager = new VectorStoreManager();
+  await vectorStoreManager.addDocuments(chunks);
+
+  console.log('\n✓ Vector store populated successfully.');
 }
 
-main().catch(console.error);
+main().catch((err) => {
+  console.error("Error during execution:", err);
+});
