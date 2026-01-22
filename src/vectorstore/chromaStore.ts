@@ -2,7 +2,6 @@ import { Chroma } from "@langchain/community/vectorstores/chroma";
 import { OllamaEmbeddings } from "@langchain/ollama";
 import { Document as LangChainDocument } from "@langchain/core/documents";
 import { Document } from "../loaders/textLoader.js";
-import { ChromaClient } from "chromadb";
 
 export class VectorStoreManager {
     private embeddings: OllamaEmbeddings;
