@@ -5,7 +5,7 @@ import { Document } from '../types/document.js';
 import path from 'path';
 
 export class PdfLoader {
-    // category mapping here
+    // category mapping
     private categoryMap: Record<string, string> = {
         'Traveller': 'rules',
         '(Cepheus)': 'thematic_dna',

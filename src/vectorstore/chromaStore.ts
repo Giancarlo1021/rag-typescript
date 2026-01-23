@@ -6,34 +6,31 @@ import 'dotenv/config';
 
 export class VectorStoreManager {
     private embeddings: OllamaEmbeddings;
-    private collectionName: string = "traveller_rag"; // Fixed name string
+    private collectionName: string = "traveller_rag";
     private dbUrl: string;
 
-    // The first argument passed from index.ts is actually the chromaUrl
     constructor(dbUrl: string = "http://localhost:8000") {
         this.dbUrl = dbUrl;
 
         this.embeddings = new OllamaEmbeddings({
             model: "qwen3-embedding:0.6b",
-            // Use the .env variable if it exists, otherwise localhost
             baseUrl: process.env.OLLAMA_BASE_URL || "http://localhost:11434",
         });
     }
 
     /**
-     * 🛠️ Helper to get a connection to the vector store
+     * Helper to get a connection to the vector store
      */
     public getStore(): Chroma {
         return new Chroma(this.embeddings, {
-            collectionName: this.collectionName, // This is now "traveller_rag"
-            url: this.dbUrl,                     // This is now "http://localhost:8000"
+            collectionName: this.collectionName,
+            url: this.dbUrl,
         });
     }
 
     async getCount(): Promise<number> {
         try {
             const vectorStore = this.getStore();
-            // ensureCollection checks if it's alive and ready
             const collection = await vectorStore.ensureCollection();
             return await collection.count();
         } catch (error) {
@@ -43,7 +40,7 @@ export class VectorStoreManager {
     }
 
     /**
-     * 🔍 Search for a file in the metadata to see if it's already there
+     * Search for a file in the metadata to see if it's already there
      */
     async searchMetadata(filter: object): Promise<any[]> {
         try {

@@ -29,7 +29,7 @@ function applyMarkdown(text: string): string {
     // Inline code (`text`)
     result = result.replace(/`([^`]+?)`/g, (match, p1) => ctx.bgGray.white(` ${p1} `));
 
-    // Italics (*text* or _text_) - must come after bold
+    // Italics (*text* or _text_)
     result = result.replace(/(?<!\*)\*(?!\*)([^*]+?)(?<!\*)\*(?!\*)/g, (match, p1) => ctx.yellowBright(p1));
     result = result.replace(/(?<!_)_(?!_)([^_]+?)(?<!_)_(?!_)/g, (match, p1) => ctx.yellowBright(p1));
 
@@ -67,7 +67,7 @@ function wrapText(text: string, maxWidth: number): string[] {
 }
 
 /**
- * 📊 Render a table with proper alignment and text wrapping
+ * Render a table with proper alignment and text wrapping
  */
 function renderTable(data: string[][], terminalWidth: number = 120): string {
     if (data.length === 0) return '';
@@ -143,7 +143,7 @@ function renderTable(data: string[][], terminalWidth: number = 120): string {
 }
 
 /**
- * 🎨 Enhanced Markdown Renderer
+ * Markdown Renderer
  * Renders markdown with proper terminal styling
  */
 export function renderMarkdown(text: string): string {
@@ -156,7 +156,7 @@ export function renderMarkdown(text: string): string {
     for (let i = 0; i < lines.length; i++) {
         let line = lines[i];
 
-        // Handle code blocks
+        // 1. Handle code blocks (No markdown inside here)
         if (line.trimStart().startsWith('```')) {
             inCodeBlock = !inCodeBlock;
             result.push(ctx.gray('─'.repeat(60)));
@@ -168,16 +168,14 @@ export function renderMarkdown(text: string): string {
             continue;
         }
 
-        // Check if this is a table row (contains pipes)
+        // 2. Table Logic (Stays the same, it calls applyMarkdown internally)
         if (line.includes('|')) {
             const cells = line.split('|').map(cell => cell.trim()).filter(cell => cell.length > 0);
-
-            // Check if this is a separator row (|---|---|)
             const isSeparator = cells.every(cell => /^[-:]+$/.test(cell));
 
             if (isSeparator) {
                 inTable = true;
-                continue; // Skip separator rows
+                continue;
             }
 
             if (cells.length > 0) {
@@ -187,34 +185,37 @@ export function renderMarkdown(text: string): string {
             }
         }
 
-        // If we were in a table and now we're not, render the table
         if (inTable && !line.includes('|')) {
             result.push(renderTable(tableData));
-            result.push(''); // Add spacing after table
+            result.push('');
             tableData = [];
             inTable = false;
         }
 
-        // Process non-table lines
+        // 3. Process formatting for Headers and Blockquotes
         let l = line;
 
-        // Headers
+        // Headers: Apply markdown to the text AFTER the symbols
         if (l.startsWith('### ')) {
-            result.push(ctx.bold.cyanBright(l.replace('### ', '')));
+            const content = applyMarkdown(l.replace('### ', ''));
+            result.push(ctx.bold.cyanBright(content));
             continue;
         }
         if (l.startsWith('## ')) {
-            result.push(ctx.bold.magentaBright(l.replace('## ', '')));
+            const content = applyMarkdown(l.replace('## ', ''));
+            result.push(ctx.bold.magentaBright(content));
             continue;
         }
         if (l.startsWith('# ')) {
-            result.push(ctx.bold.magentaBright.underline(l.replace('# ', '')));
+            const content = applyMarkdown(l.replace('# ', ''));
+            result.push(ctx.bold.magentaBright.underline(content));
             continue;
         }
 
-        // Blockquotes
+        // Blockquotes: Apply markdown to the text AFTER the '>'
         if (l.trimStart().startsWith('>')) {
-            result.push(ctx.gray.italic(l.replace(/^\s*>\s*/, '│ ')));
+            const content = applyMarkdown(l.replace(/^\s*>\s*/, ''));
+            result.push(ctx.gray.italic(`│ ${content}`));
             continue;
         }
 
@@ -224,17 +225,14 @@ export function renderMarkdown(text: string): string {
             continue;
         }
 
-        // Bullet points and numbered lists
+        // 4. Standard lines
         l = l.replace(/^(\s*)[*\-+]\s+/, (match, spaces) => spaces + ctx.whiteBright('• '));
         l = l.replace(/^(\s*)(\d+)\.\s+/, (match, spaces, num) => spaces + ctx.cyan(`${num}. `));
 
-        // Apply markdown formatting
-        l = applyMarkdown(l);
-
-        result.push(l);
+        // Final catch-all for normal text
+        result.push(applyMarkdown(l));
     }
 
-    // Render any remaining table data
     if (inTable && tableData.length > 0) {
         result.push(renderTable(tableData));
     }

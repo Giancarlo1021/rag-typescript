@@ -1,4 +1,3 @@
-// Add the 'export' keyword right here!
 export interface Document {
     content: string;
     metadata: {

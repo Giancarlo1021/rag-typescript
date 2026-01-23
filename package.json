@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "nodemon --exec tsx src/index.ts",
+    "dev": "nodemon --interactive --exec tsx src/index.ts",
     "build": "tsc",
+    "postbuild": "node notify.js",
     "start": "node dist/index.js"
   },
   "dependencies": {
