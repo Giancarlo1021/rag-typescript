@@ -1,4 +1,3 @@
-// If you have a TextLoader class in here as well:
 import * as fs from 'fs/promises';
 import { Document } from '../types/document.js';
 

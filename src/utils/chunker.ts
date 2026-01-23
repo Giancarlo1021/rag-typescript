@@ -1,4 +1,4 @@
-import { Document } from '../loaders/textLoader';
+import { Document } from '../types/document.ts'
 
 export interface ChunkConfig {
   chunkSize: number;
@@ -15,7 +15,7 @@ export class TextChunker {
   chunkDocument(document: Document): Document[] {
     const { content, metadata } = document;
     const chunks: Document[] = [];
-    
+
     let startIndex = 0;
     let chunkIndex = 0;
 

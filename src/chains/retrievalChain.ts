@@ -9,13 +9,11 @@ const formatDocuments = (docs: any[]) => {
     return docs.map((doc) => doc.pageContent).join("\n\n");
 };
 
-// Use 127.0.0.1 for local Docker stability
 const chromaUrl = process.env.CHROMA_URL || "http://127.0.0.1:8000";
 const ollamaUrl = process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434";
 const COLLECTION_NAME = "traveller_rag";
 
 export const setupChain = async () => {
-    // Using ChatOllama for better message handling
     const llm = new ChatOllama({
         model: "gpt-oss:20b",
         temperature: 0,

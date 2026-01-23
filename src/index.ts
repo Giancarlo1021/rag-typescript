@@ -15,19 +15,27 @@ import boxen from 'boxen';
 import { renderMarkdown } from './utils/markdownRenderer.js';
 import 'dotenv/config';
 
+function truncatePath(path: string, maxLength: number = 30): string {
+  if (path.length <= maxLength) return path;
+  const partSize = Math.floor((maxLength - 3) / 2);
+  return `${path.substring(0, partSize)}...${path.substring(path.length - partSize)}`;
+}
+
 // --- CONFIGURATION ---
 const chromaUrl = process.env.CHROMA_URL || `http://localhost:8000`;
-const ctx = new Chalk({ level: 3 });
+const ctx = new Chalk({ level: 2 });
 
-// --- UI COMPONENTS ---
+// --- TERMINAL UI COMPONENTS ---
 function createResponsePanel(content: string): string {
   return boxen(content, {
     padding: 1,
     margin: { top: 0, bottom: 1, left: 0, right: 0 },
-    borderStyle: 'round',
-    borderColor: 'magenta',
+    borderStyle: 'double',
+    borderColor: 'magentaBright',
     title: '🤖 Assistant',
     titleAlignment: 'left',
+    float: 'left',
+    width: process.stdout.columns - 4
   });
 }
 
@@ -35,10 +43,12 @@ function createInfoPanel(content: string, title: string = 'ℹ️ Info'): string
   return boxen(content, {
     padding: 1,
     margin: { top: 0, bottom: 1, left: 0, right: 0 },
-    borderStyle: 'round',
-    borderColor: 'cyan',
+    borderStyle: 'bold',
+    borderColor: 'blueBright',
     title,
     titleAlignment: 'left',
+    float: 'left',
+    width: process.stdout.columns - 4
   });
 }
 
@@ -52,9 +62,15 @@ async function main() {
 
   console.log(boxen(
     ctx.bold.magentaBright('🚀 RAG System Terminal\n') +
-    ctx.gray('Powered by LangChain & ChromaDB'),
-    { padding: 1, margin: 1, borderStyle: 'double', borderColor: 'magenta', textAlignment: 'center' }
-  ));
+    ctx.gray('Powered by LangChain & ChromaDB'), {
+    padding: 1,
+    margin: 1,
+    borderStyle: 'double',
+    borderColor: 'green',
+    textAlignment: 'center',
+    float: 'left',
+    width: process.stdout.columns - 4
+  }));
 
   const checkSpinner = ora({ text: 'Checking database...', color: 'cyan' }).start();
   let count = await vectorStoreManager.getCount();
@@ -65,7 +81,7 @@ async function main() {
     const allFiles = await fs.readdir(docsDir);
     const validFiles = allFiles.filter(file =>
       !file.startsWith('.') &&
-      !file.includes(':Zone.Identifier') && // Skip those Windows metadata files
+      !file.includes(':Zone.Identifier') &&
       ['.pdf', '.epub', '.txt'].includes(path.extname(file).toLowerCase())
     );
 
@@ -73,9 +89,11 @@ async function main() {
       console.log(ctx.bold.yellow('\n📚 Checking for new documents...\n'));
 
       const progressBar = new cliProgress.SingleBar({
-        format: ctx.cyan('Progress |') + '{bar}' + ctx.cyan('| {percentage}% | {value}/{total} files | {filename}'),
-        barCompleteChar: '\u2588', barIncompleteChar: '\u2591', hideCursor: true
-      }, cliProgress.Presets.shades_classic);
+        format: (' Progress |') +
+          ctx.magentaBright('{bar}') + (' {percentage}% | {value}/{total} Files ') +
+          ctx.italic.gray(' {filename}'),
+        hideCursor: true,
+      }, cliProgress.Presets.shades_grey);
 
       progressBar.start(validFiles.length, 0, { filename: 'Starting...' });
 
@@ -84,19 +102,16 @@ async function main() {
         const filePath = path.join(docsDir, file);
         const extension = path.extname(file).toLowerCase();
 
-        // 🔍 Smart Check: Skip if already ingested
-        // We use basename to match the 'source' metadata format in PdfLoader
         const existing = await vectorStoreManager.searchMetadata({ source: file });
         if (existing.length > 0) {
-          progressBar.increment(1, { filename: `Skipped: ${file}` });
+          progressBar.increment(1, { filename: truncatePath(`Skipped: ${file}`, 25) });
           continue;
         }
 
-        progressBar.update(i, { filename: file });
+        progressBar.update(i, { filename: truncatePath(file, 25) });
 
         try {
           let doc = null;
-
           if (extension === '.pdf') {
             const loader = new PdfLoader();
             doc = await loader.load(filePath);
@@ -105,21 +120,16 @@ async function main() {
             doc = await loader.load(filePath);
           }
 
-          // If loader failed or returned null, skip it
-          if (!doc || !doc.content) {
-            continue;
-          }
+          if (!doc || !doc.content) continue;
 
-          // Process valid document
-          const chunks = await textChunker.chunkDocument(doc);
+          const chunks = textChunker.chunkDocument(doc);
           await vectorStoreManager.addDocuments(chunks);
 
-          progressBar.increment(1, { filename: `Ingested: ${file}` });
+          progressBar.increment(1, { filename: truncatePath(`Ingested: ${file}`, 25) });
 
         } catch (error) {
-          // Individual file error - log and move on to next file
           console.log(ctx.red(`\n❌ Error processing ${file}: ${error instanceof Error ? error.message : 'Unknown error'}`));
-          progressBar.increment(1, { filename: `Failed: ${file}` });
+          progressBar.increment(1, { filename: truncatePath(`Failed: ${file}`, 25) });
           continue;
         }
       }
@@ -138,7 +148,7 @@ async function main() {
   console.log(createInfoPanel(`💬 Ask about your documents\n` + ctx.gray('Type "exit" to quit'), '🎯 Ready'));
 
   while (true) {
-    const userInput = await rl.question(ctx.bold.blue('\n❯ You: '));
+    const userInput = await rl.question(ctx.blueBright('\n❯ You: '));
     if (['exit', 'quit'].includes(userInput.toLowerCase())) break;
     if (!userInput.trim()) continue;
 
