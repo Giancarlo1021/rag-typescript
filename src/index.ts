@@ -16,7 +16,6 @@ import { renderMarkdown } from './utils/markdownRenderer.js';
 import 'dotenv/config';
 
 // --- CONFIGURATION ---
-// Inside WSL, the app talks to Docker on localhost.
 const chromaUrl = process.env.CHROMA_URL || `http://localhost:8000`;
 const ctx = new Chalk({ level: 3 });
 
@@ -46,8 +45,9 @@ function createInfoPanel(content: string, title: string = 'ℹ️ Info'): string
 async function main() {
   const rl = readline.createInterface({ input, output });
 
-  // Ensure the Manager knows where the DB is
+  // Initialize Managers
   const vectorStoreManager = new VectorStoreManager(chromaUrl);
+  const textChunker = new TextChunker({ chunkSize: 800, chunkOverlap: 100 });
   const docsDir = path.resolve('./docs');
 
   console.log(boxen(
@@ -65,6 +65,7 @@ async function main() {
     const allFiles = await fs.readdir(docsDir);
     const validFiles = allFiles.filter(file =>
       !file.startsWith('.') &&
+      !file.includes(':Zone.Identifier') && // Skip those Windows metadata files
       ['.pdf', '.epub', '.txt'].includes(path.extname(file).toLowerCase())
     );
 
@@ -84,6 +85,7 @@ async function main() {
         const extension = path.extname(file).toLowerCase();
 
         // 🔍 Smart Check: Skip if already ingested
+        // We use basename to match the 'source' metadata format in PdfLoader
         const existing = await vectorStoreManager.searchMetadata({ source: file });
         if (existing.length > 0) {
           progressBar.increment(1, { filename: `Skipped: ${file}` });
@@ -93,30 +95,32 @@ async function main() {
         progressBar.update(i, { filename: file });
 
         try {
-          let loader;
-          if (extension === '.pdf') loader = new PdfLoader();
-          else if (extension === '.epub') loader = new EpubLoader();
-          else continue;
+          let doc = null;
 
-          const loadedResult = await loader.load(filePath);
+          if (extension === '.pdf') {
+            const loader = new PdfLoader();
+            doc = await loader.load(filePath);
+          } else if (extension === '.epub') {
+            const loader = new EpubLoader();
+            doc = await loader.load(filePath);
+          }
 
-          if (!loadedResult || (Array.isArray(loadedResult) && loadedResult.length === 0)) {
+          // If loader failed or returned null, skip it
+          if (!doc || !doc.content) {
             continue;
           }
 
-          const documents = Array.isArray(loadedResult) ? loadedResult : [loadedResult];
-          const chunker = new TextChunker({ chunkSize: 800, chunkOverlap: 100 });
+          // Process valid document
+          const chunks = await textChunker.chunkDocument(doc);
+          await vectorStoreManager.addDocuments(chunks);
 
-          for (const doc of documents) {
-            if (!doc.pageContent) continue;
-            const chunks = chunker.chunkDocument(doc);
-
-            // 🚀 IMPORTANT: Actually add the chunks to the database!
-            await vectorStoreManager.addDocuments(chunks);
-          }
           progressBar.increment(1, { filename: `Ingested: ${file}` });
-        } catch (err: any) {
-          progressBar.increment(1, { filename: `Error: ${file}` });
+
+        } catch (error) {
+          // Individual file error - log and move on to next file
+          console.log(ctx.red(`\n❌ Error processing ${file}: ${error instanceof Error ? error.message : 'Unknown error'}`));
+          progressBar.increment(1, { filename: `Failed: ${file}` });
+          continue;
         }
       }
       progressBar.stop();
@@ -148,10 +152,8 @@ async function main() {
 
       responseSpinner.stop();
 
-      // 1. Render main answer
       console.log(createResponsePanel(renderMarkdown(response.answer)));
 
-      // 2. Styled Sources & Stats
       if (response.context && response.context.length > 0) {
         const uniqueSources = [...new Set(response.context.map((d: any) => d.metadata.source))];
         const sourceText = uniqueSources
