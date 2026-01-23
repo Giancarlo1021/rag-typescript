@@ -2,9 +2,8 @@ services:
   chromadb:
     image: chromadb/chroma:latest
     volumes:
-      # 💡 This is the magic line. 
-      # It maps the "chroma_data" folder in your project to the DB folder in Docker.
-      - ./chroma_data:/chroma/chroma 
+      # Changed from /chroma/chroma to /chroma/data
+      - ./chroma_data:/chroma/data 
     environment:
       - IS_PERSISTENT=TRUE
       - ANONYMIZED_TELEMETRY=FALSE
