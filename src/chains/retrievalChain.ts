@@ -23,7 +23,7 @@ export const setupChain = async () => {
     });
 
     const embeddings = new OllamaEmbeddings({
-        model: "qwen3-embedding",
+        model: "qwen3-embedding:0.6b",
         baseUrl: ollamaUrl
     });
 
