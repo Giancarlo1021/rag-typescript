@@ -1,6 +1,10 @@
 # .gitignore
 node_modules/
 dist/
-docs/*.pdf
+docs/
+*.pdf
 chroma_data/
 .env
+docker-compose.yml
+*.epub
+*.pdf

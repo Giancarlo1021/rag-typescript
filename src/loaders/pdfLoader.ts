@@ -1,7 +1,7 @@
 import * as fs from 'fs/promises';
 // @ts-ignore
 import pdf from 'pdf-parse/lib/pdf-parse.js';
-import { Document } from './textLoader.js';
+import { Document } from '../types/document.js';
 
 export class PdfLoader {
     async load(filePath: string): Promise<Document> {
@@ -12,7 +12,8 @@ export class PdfLoader {
             content: data.text,
             metadata: {
                 source: filePath,
-            },
+                category: filePath.includes('Traveller') ? 'rules' : 'thematic_dna'
+            }
         };
     }
 }

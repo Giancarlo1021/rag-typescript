@@ -1,12 +1,6 @@
+// If you have a TextLoader class in here as well:
 import * as fs from 'fs/promises';
-
-export interface Document {
-  content: string;
-  metadata: {
-    source: string;
-    chunkIndex?: number;
-  };
-}
+import { Document } from '../types/document.js';
 
 export class TextLoader {
   async load(filePath: string): Promise<Document> {
@@ -15,6 +9,7 @@ export class TextLoader {
       content,
       metadata: {
         source: filePath,
+        category: 'thematic_dna'
       },
     };
   }
