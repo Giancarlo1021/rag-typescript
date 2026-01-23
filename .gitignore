@@ -2,9 +2,9 @@
 node_modules/
 dist/
 docs/
-*.pdf
 chroma_data/
 .env
 docker-compose.yml
 *.epub
 *.pdf
+*:Zone.Identifier
