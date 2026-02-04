@@ -1,0 +1,25 @@
+# Network Settings
+
+REMOTE_HOST=1
+PORT=
+
+# Inside WSL, the services look like they are on localhost
+
+# because of how Docker and WSL bridge to Windows.
+
+LOCAL_LLM_MODEL=
+OLLAMA_BASE_URL=
+CHROMA_URL=
+EMBEDDING_MODEL=
+API_BASE_URL=
+API_MODEL=
+API_KEY=
+
+# Application Settings
+
+NODE_ENV=
+DOCS_PATH=
+
+# Retrieval Chain Prompts
+
+QA_PROMPT =
