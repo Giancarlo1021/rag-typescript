@@ -24,6 +24,7 @@ const apiBaseURL = process.env.API_BASE_URL;
 const apiModel = process.env.API_MODEL;
 const apiKey = process.env.API_KEY;
 const qa_Prompt = process.env.QA_PPROMPT || "";
+const collectionName = process.env.COLLECTION_NAME;
 
 export const setupChain = async (options?: { provider?: "Local" | "API" }) => {
   const provider = options?.provider;
@@ -50,7 +51,7 @@ export const setupChain = async (options?: { provider?: "Local" | "API" }) => {
 
   const vectorStore = await Chroma.fromExistingCollection(embeddings, {
     url: chromaUrl,
-    collectionName: "RAG",
+    collectionName: collectionName,
   });
 
   const retriever = vectorStore.asRetriever({ k: 10 });
@@ -66,6 +67,7 @@ export const setupChain = async (options?: { provider?: "Local" | "API" }) => {
 
   const qaPrompt = ChatPromptTemplate.fromMessages([
     ["system", qa_Prompt],
+    new MessagesPlaceholder("context"),
     new MessagesPlaceholder("chat_history"),
     ["human", "{input}"],
   ]);
@@ -89,7 +91,6 @@ export const setupChain = async (options?: { provider?: "Local" | "API" }) => {
             chat_history: input.chat_history.slice(-2),
           });
         }
-
         const rawDocs = await retriever.invoke(query);
         const formattedContext = formatDocuments(rawDocs);
 
