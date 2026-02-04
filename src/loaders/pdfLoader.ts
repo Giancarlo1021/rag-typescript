@@ -5,7 +5,7 @@ import { Document } from "../types/document.js";
 import path from "path";
 
 export class PdfLoader {
-  // category mapping
+  // category mapping for metadata
   private categoryMap: Record<string, string> = {
     "(DNA)": "thematic_dna",
     "(Core)": "rules",
@@ -32,11 +32,13 @@ export class PdfLoader {
 
       if (!data || !data.text) return null;
 
+      const category = this.getCategory(filePath);
+
       return {
         content: data.text,
         metadata: {
           source: path.basename(filePath),
-          category: "rpg-manual",
+          category: category,
         },
       };
     } catch (error) {
