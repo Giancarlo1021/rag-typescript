@@ -23,7 +23,7 @@ const embeddingModel = process.env.EMBEDDING_MODEL;
 const apiBaseURL = process.env.API_BASE_URL;
 const apiModel = process.env.API_MODEL;
 const apiKey = process.env.API_KEY;
-const qa_Prompt = process.env.QA_PPROMPT;
+const qa_Prompt = process.env.QA_PPROMPT || "";
 
 export const setupChain = async (options?: { provider?: "Local" | "API" }) => {
   const provider = options?.provider;
@@ -65,7 +65,7 @@ export const setupChain = async (options?: { provider?: "Local" | "API" }) => {
   ]);
 
   const qaPrompt = ChatPromptTemplate.fromMessages([
-    qa_Prompt,
+    ["system", qa_Prompt],
     new MessagesPlaceholder("chat_history"),
     ["human", "{input}"],
   ]);

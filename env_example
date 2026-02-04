@@ -1,25 +1,31 @@
 # Network Settings
 
-REMOTE_HOST=1
-PORT=
+REMOTE_HOST=0.0.0.0
+PORT=3000
 
 # Inside WSL, the services look like they are on localhost
 
 # because of how Docker and WSL bridge to Windows.
 
-LOCAL_LLM_MODEL=
-OLLAMA_BASE_URL=
-CHROMA_URL=
-EMBEDDING_MODEL=
-API_BASE_URL=
-API_MODEL=
-API_KEY=
+LOCAL_LLM_MODEL=your-local-model-name
+OLLAMA_BASE_URL=http://localhost:11434
+CHROMA_URL=http://localhost:8000
+EMBEDDING_MODEL=your-embedding-model-name
+
+# External API Settings
+
+API_BASE_URL=https://openrouter.ai/api/v1
+API_MODEL=your-api-model-path
+API_KEY=your_api_key_here
+COLLECTION_NAME=your_collection_name
 
 # Application Settings
 
-NODE_ENV=
-DOCS_PATH=
+NODE_ENV=development
+DOCS_PATH=./docs
 
 # Retrieval Chain Prompts
 
-QA_PROMPT =
+# Note: Ensure your loader handles multi-line strings/backticks if using JS
+
+QA_PROMPT=""
