@@ -18,3 +18,8 @@ A Retrieval-Augmented Generation (RAG) system built with TypeScript, LangChain.j
 - Build GUI
   - Option in the terminal to use the GUI instead of the terminal
     - Should open up to a web interface
+   
+
+## Chunking Strategy 
+- I drew inspiration for my chunking strategy from this article by nvidia 
+  - https://developer.nvidia.com/blog/finding-the-best-chunking-strategy-for-accurate-ai-responses/#:~:text=The%20optimal%20chunking%20strategy%20varies,using%20NVIDIA%20NeMo%20Retriever%20extraction
